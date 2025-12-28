@@ -107,10 +107,10 @@ For peak FFMPEG performance, Chromecast (requires HTTPS), and auto-start:
 # 1. Install prerequisites (uv, Python)
 ./tools/install-prereqs.sh
 
-# 2. Get HTTPS certificates (only necessary if you want to Chromecast)
+# 2. (Optional) Get HTTPS certificates (required for Chromecast)
 ./tools/install-letsencrypt.sh yourdomain.com
 
-# 3. (Optional) Build FFmpeg with hardware encoding
+# 3. (Optional) Build FFmpeg (required for optimal NVidia encoding efficiency)
 ./tools/install-ffmpeg.sh
 
 # 4. Install systemd service
