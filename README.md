@@ -143,7 +143,7 @@ x265, AV1).
 
 Yes.
 
-We leave pronunciation and meaning as an exercise for your idiom, sir:
+We leave pronunciation and meaning as an exercise for your idiom:
 
 - **N-E-T-V** -- "Any TV", say it out loud
 - **≠TV** -- "Not Equals TV", because we're `!=` traditional cable
