@@ -73,7 +73,11 @@ RUN apt-get update && \
     CUDA_VERSION=$(apt-cache search '^cuda-nvcc-[0-9]' | sed 's/cuda-nvcc-//' | cut -d' ' -f1 | sort -V | tail -1) && \
     echo "Installing CUDA version: $CUDA_VERSION" && \
     apt-get install -y cuda-nvcc-$CUDA_VERSION cuda-cudart-dev-$CUDA_VERSION && \
-    ln -s /usr/local/cuda-* /usr/local/cuda && \
+    CUDA_DIR=$(ls -d /usr/local/cuda-* 2>/dev/null | head -1) && \
+    echo "CUDA directory: $CUDA_DIR" && \
+    ln -sf "$CUDA_DIR" /usr/local/cuda && \
+    echo "nvcc location: $(which nvcc)" && \
+    nvcc --version && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -160,34 +164,58 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Python + runtime libraries for FFmpeg + VAAPI/QSV drivers
+# Use ldd /usr/local/bin/ffmpeg in builder to verify all deps are covered
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
+    # Core codec libs
+    libaom3 \
     libass9 \
     libdav1d7 \
     libfdk-aac2 \
-    libfontconfig1 \
-    libfreetype6 \
-    libsoxr0 \
-    libsrt1.5-openssl \
-    libssl3 \
-    libwebp7 \
-    libzimg2 \
     libmp3lame0 \
-    libnuma1 \
     libopus0 \
-    libva2 \
-    libva-drm2 \
-    libvdpau1 \
     libvorbis0a \
     libvorbisenc2 \
     libvpx9 \
+    libwebp7 \
+    libwebpmux3 \
     libx264-164 \
     libx265-199 \
+    # Text/font rendering
+    libfontconfig1 \
+    libfreetype6 \
+    # Audio/video processing
+    libsoxr0 \
+    libzimg2 \
+    libnuma1 \
+    # Network/crypto
+    libsrt1.5-openssl \
+    libssl3 \
+    # X11/display
     libxcb1 \
-    # VAAPI drivers (Intel + AMD)
+    libxcb-shm0 \
+    libxcb-shape0 \
+    libxcb-xfixes0 \
+    libxv1 \
+    libx11-6 \
+    libxext6 \
+    # Hardware accel
+    libva2 \
+    libva-drm2 \
+    libva-x11-2 \
+    libvdpau1 \
     intel-media-va-driver \
     mesa-va-drivers \
+    # Other deps
+    libunistring5 \
+    liblzma5 \
+    liblzo2-2 \
+    libasound2t64 \
+    libdrm2 \
+    libsndio7.0 \
+    libsdl2-2.0-0 \
+    libpulse0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy FFmpeg binaries from builder
