@@ -182,5 +182,5 @@ ENV NETV_HTTPS=""
 RUN useradd -m netv
 USER netv
 
-# Shell form to expand env vars; NETV_HTTPS=1 adds --https flag
+# Shell form for env var expansion; NETV_HTTPS=1 adds --https flag
 CMD python3 main.py --port ${NETV_PORT} ${NETV_HTTPS:+--https}
