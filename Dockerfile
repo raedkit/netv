@@ -164,7 +164,7 @@ COPY --from=builder /opt/bin/ffprobe /usr/local/bin/
 
 # App setup
 WORKDIR /app
-COPY pyproject.toml .
+COPY pyproject.toml README.md ./
 COPY *.py ./
 COPY templates/ templates/
 COPY static/ static/
