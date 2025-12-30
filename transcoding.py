@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import math
 import pathlib
 import re
 import shutil
@@ -522,11 +521,18 @@ _MAX_RES_HEIGHT: dict[str, int] = {
     "480p": 480,
 }
 
-_DEFAULT_BITRATE_MBPS: dict[str, float] = {
-    "4k": 20,
-    "1080p": 6,
-    "720p": 3,
-    "480p": 1.5,
+# Peak Quality presets -> QP values (lower = higher quality ceiling)
+_QUALITY_QP: dict[str, int] = {
+    "high": 20,
+    "medium": 28,
+    "low": 35,
+}
+
+# CRF values for libx264 (similar scale)
+_QUALITY_CRF: dict[str, int] = {
+    "high": 20,
+    "medium": 26,
+    "low": 32,
 }
 
 
@@ -537,7 +543,7 @@ def _build_video_args(
     is_vod: bool,
     use_full_cuda: bool,
     max_resolution: str,
-    max_bitrate: str,
+    quality: str,
 ) -> None:
     if copy_video:
         cmd.extend(["-c:v", "copy"])
@@ -548,6 +554,7 @@ def _build_video_args(
     # scale='min(iw,ih*16/9)':min(ih,MAX_H) - but simpler: scale=-2:MIN(ih,MAX_H)
     # Using -2 keeps width divisible by 2, and min() only scales down
     scale_expr = f"'min(ih,{max_h})'" if max_h else None
+    qp = _QUALITY_QP.get(quality, 28)
 
     if hw == "nvidia":
         if use_full_cuda:
@@ -608,8 +615,10 @@ def _build_video_args(
                 "h264_nvenc",
                 "-preset",
                 preset,
-                "-b:v",
-                max_bitrate,
+                "-rc",
+                "constqp",
+                "-qp",
+                str(qp),
                 "-g",
                 "60",
             ]
@@ -625,18 +634,6 @@ def _build_video_args(
                 vf = f"yadif=1,scale=-2:{scale_expr},format=nv12,hwupload"
             else:
                 vf = "yadif=1,format=nv12,hwupload"
-        # Annoyingly, VAAPI on Intel only supports CQP (constant QP) mode, not
-        # bitrate mode.  Our UI assumes bitrate specificity. To bridge this, we
-        # will map bitrate to QP using log-linear approximation based on rough
-        # estimates (from Googling):
-        #   QP 18-24 ==> 8-15 Mbps
-        #   QP 25-30 ==> 4-8 Mbps
-        #   QP 30-35 ==> 2-4 Mbps
-        # Formula: QP = 38 - 7 * ln(bitrate_mbps), clamped to [18, 40]
-        # Warning: This is really just a  wild guess. The actual bitrate
-        # depends on the encoder and the content.
-        bitrate_mbps = float(max_bitrate.rstrip("M")) if max_bitrate.endswith("M") else 6.0
-        qp = int(max(18, min(40, 38 - 7 * math.log(bitrate_mbps))))
         cmd.extend(
             [
                 "-vf",
@@ -664,9 +661,6 @@ def _build_video_args(
                 vf = f"yadif=1,scale=-2:{scale_expr},format=nv12"
             else:
                 vf = "yadif=1,format=nv12"
-        # QSV on some Intel hardware only supports CQP mode (same as VAAPI)
-        bitrate_mbps = float(max_bitrate.rstrip("M")) if max_bitrate.endswith("M") else 6.0
-        qp = int(max(18, min(40, 38 - 7 * math.log(bitrate_mbps))))
         cmd.extend(
             [
                 "-vf",
@@ -692,6 +686,7 @@ def _build_video_args(
                 vf = f"yadif=1,scale=-2:{scale_expr}"
             else:
                 vf = "yadif=1"
+        crf = _QUALITY_CRF.get(quality, 26)
         cmd.extend(
             [
                 "-vf",
@@ -700,8 +695,8 @@ def _build_video_args(
                 "libx264",
                 "-preset",
                 "veryfast",
-                "-b:v",
-                max_bitrate,
+                "-crf",
+                str(crf),
                 "-g",
                 "60",
             ]
@@ -741,16 +736,12 @@ def build_hls_ffmpeg_cmd(
     subtitles: list[SubtitleStream] | None = None,
     media_info: MediaInfo | None = None,
     max_resolution: str = "1080p",
-    max_bitrate_mbps: float = 0,
+    quality: str = "high",
     user_agent: str | None = None,
 ) -> list[str]:
     # Check if we need to scale down
     max_h = _MAX_RES_HEIGHT.get(max_resolution, 9999)
     needs_scale = media_info and media_info.height > max_h
-    # Check if source bitrate exceeds max (0 = unlimited)
-    max_bps = int(max_bitrate_mbps * 1_000_000) if max_bitrate_mbps > 0 else 0
-    source_bps = media_info.video_bitrate if media_info else 0
-    needs_bitrate_limit = max_bps > 0 and source_bps > max_bps
 
     copy_video = bool(
         is_vod
@@ -758,7 +749,6 @@ def build_hls_ffmpeg_cmd(
         and media_info.video_codec == "h264"
         and media_info.pix_fmt == "yuv420p"
         and not needs_scale  # Can't copy if we need to scale down
-        and not needs_bitrate_limit  # Can't copy if source exceeds max bitrate
     )
     copy_audio = bool(
         is_vod
@@ -837,11 +827,6 @@ def build_hls_ffmpeg_cmd(
         )
 
     cmd.extend(["-map", "0:v:0", "-map", "0:a:0"])
-    # Use provided bitrate, or default based on resolution (format as "XM" for ffmpeg)
-    effective_mbps = (
-        max_bitrate_mbps if max_bitrate_mbps > 0 else _DEFAULT_BITRATE_MBPS.get(max_resolution, 6)
-    )
-    bitrate_str = f"{effective_mbps}M"
     _build_video_args(
         cmd,
         copy_video,
@@ -849,7 +834,7 @@ def build_hls_ffmpeg_cmd(
         is_vod,
         use_full_cuda,
         max_resolution,
-        bitrate_str,
+        quality,
     )
     _build_audio_args(cmd, copy_audio, media_info)
 
@@ -1225,7 +1210,7 @@ async def _handle_existing_vod_session(
     hw: str,
     do_probe: bool,
     max_resolution: str = "1080p",
-    max_bitrate_mbps: float = 0,
+    quality: str = "high",
 ) -> dict[str, Any] | None:
     """Handle existing VOD session: reuse active, return cached, or append.
 
@@ -1279,7 +1264,7 @@ async def _handle_existing_vod_session(
         None,
         media_info,
         max_resolution,
-        max_bitrate_mbps,
+        quality,
         get_user_agent(),
     )
 
@@ -1355,7 +1340,7 @@ async def _do_start_transcode(
     settings = _load_settings()
     hw = settings.get("transcode_hw", "software")
     max_resolution = settings.get("max_resolution", "1080p")
-    max_bitrate_mbps = float(settings.get("max_bitrate_mbps", 0) or 0)
+    quality = settings.get("quality", "high")
     is_vod = content_type in ("movie", "series")
     probe_key = {"movie": "probe_movies", "series": "probe_series"}
     do_probe = is_vod and settings.get(probe_key.get(content_type, ""), False)
@@ -1402,7 +1387,7 @@ async def _do_start_transcode(
         subtitles,
         media_info,
         max_resolution,
-        max_bitrate_mbps,
+        quality,
         get_user_agent(),
     )
     if old_seek_offset > 0:
@@ -1527,7 +1512,7 @@ async def _start_transcode(
             settings = _load_settings()
             hw = settings.get("transcode_hw", "software")
             max_resolution = settings.get("max_resolution", "1080p")
-            max_bitrate_mbps = float(settings.get("max_bitrate_mbps", 0) or 0)
+            quality = settings.get("quality", "high")
             probe_key = {"movie": "probe_movies", "series": "probe_series"}
             do_probe = settings.get(probe_key.get(content_type, ""), False)
             result = await _handle_existing_vod_session(
@@ -1536,7 +1521,7 @@ async def _start_transcode(
                 hw,
                 do_probe,
                 max_resolution,
-                max_bitrate_mbps,
+                quality,
             )
             if result:
                 return result
@@ -1637,7 +1622,7 @@ async def seek_transcode(session_id: str, seek_time: float) -> dict[str, Any]:
     settings = _load_settings()
     hw = settings.get("transcode_hw", "software")
     max_resolution = settings.get("max_resolution", "1080p")
-    max_bitrate_mbps = float(settings.get("max_bitrate_mbps", 0) or 0)
+    quality = settings.get("quality", "high")
     segment_num = int(seek_time / _HLS_SEGMENT_DURATION_SEC)
 
     # Kill existing process
@@ -1677,7 +1662,7 @@ async def seek_transcode(session_id: str, seek_time: float) -> dict[str, Any]:
         subtitles or None,
         media_info,
         max_resolution,
-        max_bitrate_mbps,
+        quality,
         get_user_agent(),
     )
     i_idx = cmd.index("-i")

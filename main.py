@@ -1513,7 +1513,7 @@ async def settings_page(request: Request, user: Annotated[dict, Depends(require_
             "transcode_mode": server_settings.get("transcode_mode", "auto"),
             "transcode_hw": server_settings.get("transcode_hw", "nvidia"),
             "max_resolution": server_settings.get("max_resolution", "1080p"),
-            "max_bitrate_mbps": server_settings.get("max_bitrate_mbps", 0),
+            "quality": server_settings.get("quality", "high"),
             "vod_transcode_cache_mins": server_settings.get("vod_transcode_cache_mins", 60),
             "probe_movies": server_settings.get("probe_movies", True),
             "probe_series": server_settings.get("probe_series", False),
@@ -1918,7 +1918,7 @@ async def settings_transcode(
     mode: Annotated[str, Form()],
     hw: Annotated[str, Form()],
     max_resolution: Annotated[str, Form()] = "1080p",
-    max_bitrate_mbps: Annotated[float, Form()] = 0,
+    quality: Annotated[str, Form()] = "high",
     vod_transcode_cache_mins: Annotated[int, Form()] = 60,
     probe_movies: Annotated[str | None, Form()] = None,
     probe_series: Annotated[str | None, Form()] = None,
@@ -1927,7 +1927,7 @@ async def settings_transcode(
     settings["transcode_mode"] = mode
     settings["transcode_hw"] = hw
     settings["max_resolution"] = max_resolution
-    settings["max_bitrate_mbps"] = max(0.0, max_bitrate_mbps)
+    settings["quality"] = quality if quality in ("high", "medium", "low") else "high"
     settings["vod_transcode_cache_mins"] = max(0, vod_transcode_cache_mins)
     settings["probe_movies"] = probe_movies == "on"
     settings["probe_series"] = probe_series == "on"
