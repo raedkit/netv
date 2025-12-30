@@ -216,6 +216,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     intel-media-va-driver \
     mesa-va-drivers \
     # Other deps
+    zlib1g \
     libunistring5 \
     liblzma5 \
     liblzo2-2 \
