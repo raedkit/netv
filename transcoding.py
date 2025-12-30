@@ -556,24 +556,24 @@ def _build_video_args(
                     cmd.extend(
                         [
                             "-vf",
-                            f"scale_cuda=-2:{scale_expr}:format=yuv420p",
+                            f"scale_cuda=-2:{scale_expr}:format=nv12",
                         ]
                     )
                 else:
-                    cmd.extend(["-vf", "scale_cuda=format=yuv420p"])
+                    cmd.extend(["-vf", "scale_cuda=format=nv12"])
             else:
                 if scale_expr:
                     cmd.extend(
                         [
                             "-vf",
-                            f"yadif_cuda=1,scale_cuda=-2:{scale_expr}:format=yuv420p",
+                            f"yadif_cuda=1,scale_cuda=-2:{scale_expr}:format=nv12",
                         ]
                     )
                 else:
                     cmd.extend(
                         [
                             "-vf",
-                            "yadif_cuda=1,scale_cuda=format=yuv420p",
+                            "yadif_cuda=1,scale_cuda=format=nv12",
                         ]
                     )
         elif is_vod:
@@ -581,14 +581,14 @@ def _build_video_args(
                 cmd.extend(
                     [
                         "-vf",
-                        f"scale=-2:{scale_expr},format=yuv420p",
+                        f"scale=-2:{scale_expr},format=nv12",
                     ]
                 )
             else:
                 cmd.extend(
                     [
                         "-vf",
-                        "format=yuv420p",
+                        "format=nv12",
                     ]
                 )
         else:
@@ -656,14 +656,17 @@ def _build_video_args(
     elif hw == "qsv":
         if is_vod:
             if scale_expr:
-                vf = f"scale=-2:{scale_expr},format=yuv420p"
+                vf = f"scale=-2:{scale_expr},format=nv12"
             else:
-                vf = "format=yuv420p"
+                vf = "format=nv12"
         else:
             if scale_expr:
-                vf = f"yadif=1,scale=-2:{scale_expr}"
+                vf = f"yadif=1,scale=-2:{scale_expr},format=nv12"
             else:
-                vf = "yadif=1"
+                vf = "yadif=1,format=nv12"
+        # QSV on some Intel hardware only supports CQP mode (same as VAAPI)
+        bitrate_mbps = float(max_bitrate.rstrip("M")) if max_bitrate.endswith("M") else 6.0
+        qp = int(max(18, min(40, 38 - 7 * math.log(bitrate_mbps))))
         cmd.extend(
             [
                 "-vf",
@@ -672,8 +675,8 @@ def _build_video_args(
                 "h264_qsv",
                 "-preset",
                 "medium",
-                "-b:v",
-                max_bitrate,
+                "-global_quality",
+                str(qp),
                 "-g",
                 "60",
             ]

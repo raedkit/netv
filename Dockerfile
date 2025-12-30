@@ -212,6 +212,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libva-drm2 \
     libva-x11-2 \
     libvdpau1 \
+    libvpl2 \
     intel-media-va-driver \
     mesa-va-drivers \
     # Other deps
