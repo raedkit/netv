@@ -20,6 +20,7 @@ services:
       - NETV_HTTPS=${NETV_HTTPS:-}
     volumes:
       - ./cache:/app/cache
+      - /etc/localtime:/etc/localtime:ro  # Use host timezone for EPG
       # For HTTPS, also mount your certificates:
       # - /etc/letsencrypt:/etc/letsencrypt:ro
     restart: unless-stopped
