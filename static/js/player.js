@@ -739,6 +739,8 @@
         case 'ArrowDown': e.preventDefault(); video.volume = Math.max(0, video.volume - 0.1); break;
         case 'f':
           e.preventDefault();
+          suppressShowControls = true;
+          setTimeout(() => suppressShowControls = false, 150);
           if (document.fullscreenElement) document.exitFullscreen();
           else document.getElementById('player-container').requestFullscreen();
           break;
@@ -793,6 +795,7 @@
 
   let activityTimeoutId = null;
   let autoNextEnabled = true;
+  let suppressShowControls = false;
 
   // Persistent settings
   const STORAGE_KEY = 'playerSettings';
@@ -811,6 +814,7 @@
     const HIDE_DELAY = 3000;
 
     function showControls() {
+      if (suppressShowControls) return;
       container.classList.add('controls-visible');
       clearTimeout(activityTimeoutId);
       activityTimeoutId = setTimeout(hideControls, HIDE_DELAY);
