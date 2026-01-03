@@ -58,24 +58,25 @@ How we compare:
 | **Library permissions** | N/A | N/A | ✅ Per-library | ✅ Per-library | ✅ Per-library |
 | **Favorites** | ✅ Drag-and-drop | ✅ | ✅ | ✅ | ✅ |
 | **Search** | ✅ Regex | ⚠️ Basic | ⚠️ Basic | ⚠️ Basic | ⚠️ Basic |
-| **Video transcoding** | ✅ Server | ❌ Browser decode | ✅ Server | ✅ Server | ✅ Server |
-| **Audio transcoding** | ✅ Server | ⚠️ Optional | ✅ Server | ✅ Server | ✅ Server |
+| **Video transcoding** | ✅ Server | ❌ No | ✅ Server | ✅ Server | ✅ Server |
+| **Audio transcoding** | ✅ Server | ⚠️ Only | ✅ Server | ✅ Server | ✅ Server |
+| **Transcode only if needed** | ✅ Auto mode | ❌ | ⚠️ Per-library | ⚠️ Per-library | ⚠️ Per-client |
 | **NVENC** | ✅ | ❌ | ✅ | ✅ | ⚠️ Pass |
 | **VAAPI** | ✅ | ❌ | ✅ | ✅ | ⚠️ Pass |
 | **QSV** | ✅ | ❌ | ✅ | ✅ | ⚠️ Pass |
-| **Stream passthrough** | ✅ Auto h264+aac | ✅ Always | ✅ | ✅ | ✅ |
 | **Software fallback** | ✅ | ❌ Browser | ✅ | ✅ | ✅ |
 | **Legacy GPU** | ✅ Any | ❌ No (browser) | ✅ Any | ✅ Any | ⚠️ Driver 450+ |
-| **Probe caching** | ✅ Dynamic | ❌ None | ⚠️ Upfront scan | ⚠️ Upfront scan | ⚠️ Upfront scan |
+| **Probe caching** | ✅ Dynamic | ❌ None | ⚠️ Offline | ⚠️ Offline | ⚠️ Offline |
 | **Episode probe reuse** | ✅ Smart (MRU) | ❌ No | ⚠️ Per-file | ⚠️ Per-file | ⚠️ Per-file |
 | **Session recovery** | ✅ Yes | ❌ No | ⚠️ Via DB | ⚠️ Via DB | ⚠️ Via DB |
 | **Auto deinterlace** | ✅ Yes | ❌ No | ⚠️ Manual | ⚠️ Manual | ⚠️ Manual |
 | **Subtitles** | ⚠️ WebVTT | ❌ No | ✅ Full | ✅ Full | ✅ Full |
 | **Chromecast** | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes |
+| **Keyboard/remote** | ✅ 10-foot UI | ⚠️ Basic | ✅ 10-foot UI | ✅ 10-foot UI | ✅ 10-foot UI |
 | **Mobile apps** | ⚠️ Web only | ⚠️ Web only | ✅ Native | ✅ Native | ✅ Native |
 | **Subscription** | ✅ Free | ✅ Free | ✅ Free | ⚠️ Premiere | ⚠️ Pass |
 | **Setup complexity** | ✅ Minimal | ✅ Minimal | ⚠️ Moderate | ⚠️ Moderate | ⚠️ Moderate |
-| **License** | Apache 2.0 | MIT | GPL v2 | GPL v2 | Proprietary |
+| **License** | Apache 2.0 | GPL v3 | GPL v2 | GPL v2 | Proprietary |
 | **Stack** | Python, FFmpeg | Node.js | .NET, FFmpeg | .NET, FFmpeg | Proprietary |
 
 [nodecast-tv]: https://github.com/technomancer702/nodecast-tv
